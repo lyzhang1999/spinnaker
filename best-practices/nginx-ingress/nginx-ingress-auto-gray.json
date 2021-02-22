@@ -1,0 +1,673 @@
+{
+  "keepWaitingPipelines": false,
+  "lastModifiedBy": "anonymous",
+  "limitConcurrent": true,
+  "spelEvaluator": "v4",
+  "stages": [
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "v1",
+          "kind": "Namespace",
+          "metadata": {
+            "name": "dev"
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "nginx",
+            "namespace": "dev"
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx"
+              }
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "image": "wangweicoding-docker.pkg.coding.net/nginx-ingress-gray/docker/nginx:v11",
+                    "name": "nginx",
+                    "ports": [
+                      {
+                        "containerPort": 80
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "name": "nginx",
+            "namespace": "dev"
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "tcp-80-80",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": 80
+              }
+            ],
+            "selector": {
+              "app": "nginx"
+            },
+            "sessionAffinity": "None",
+            "type": "NodePort"
+          }
+        },
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx"
+            },
+            "name": "my-ingress",
+            "namespace": "dev"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.development",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "部署预发布环境",
+      "namespaceOverride": "",
+      "refId": "1",
+      "requisiteStageRefIds": [],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "failPipeline": true,
+      "instructions": "是否进行 A/B 测试？",
+      "judgmentInputs": [
+        {
+          "value": "是"
+        },
+        {
+          "value": "否"
+        }
+      ],
+      "name": "是否进行 A/B 测试",
+      "notifications": [],
+      "refId": "2",
+      "requisiteStageRefIds": [
+        "1"
+      ],
+      "type": "manualJudgment"
+    },
+    {
+      "failPipeline": true,
+      "instructions": "是否进行自动化灰度？",
+      "judgmentInputs": [
+        {
+          "value": "是"
+        },
+        {
+          "value": "否"
+        }
+      ],
+      "name": "是否进行自动化灰度",
+      "notifications": [],
+      "refId": "3",
+      "requisiteStageRefIds": [
+        "2",
+        "11"
+      ],
+      "type": "manualJudgment"
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx",
+              "nginx.ingress.kubernetes.io/canary": "true",
+              "nginx.ingress.kubernetes.io/canary-weight": "30"
+            },
+            "name": "my-ingress-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.production",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx-canary",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "nginx-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx-canary"
+              }
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx-canary"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "image": "wangweicoding-docker.pkg.coding.net/nginx-ingress-gray/docker/nginx:v11",
+                    "name": "nginx",
+                    "ports": [
+                      {
+                        "containerPort": 80
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "灰度 30%",
+      "refId": "4",
+      "requisiteStageRefIds": [
+        "3"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "stageEnabled": {
+        "expression": "${ #judgment(\"是否进行自动化灰度\").equals(\"是\")}",
+        "type": "expression"
+      },
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "name": "持续 30S",
+      "refId": "5",
+      "requisiteStageRefIds": [
+        "4"
+      ],
+      "type": "wait",
+      "waitTime": 30
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx",
+              "nginx.ingress.kubernetes.io/canary": "true",
+              "nginx.ingress.kubernetes.io/canary-weight": "60"
+            },
+            "name": "my-ingress-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.pro",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx-canary",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "灰度 60%",
+      "refId": "6",
+      "requisiteStageRefIds": [
+        "5"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "name": "等待 30S",
+      "refId": "7",
+      "requisiteStageRefIds": [
+        "6"
+      ],
+      "type": "wait",
+      "waitTime": 30
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx",
+              "nginx.ingress.kubernetes.io/canary": "true",
+              "nginx.ingress.kubernetes.io/canary-weight": "90"
+            },
+            "name": "my-ingress-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.pro",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx-canary",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "灰度 90%",
+      "refId": "8",
+      "requisiteStageRefIds": [
+        "7"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "name": "等待 30S",
+      "refId": "9",
+      "requisiteStageRefIds": [
+        "8"
+      ],
+      "type": "wait",
+      "waitTime": 30
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx"
+            },
+            "name": "my-ingress-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.production",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx-canary",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Namespace",
+          "metadata": {
+            "name": "pro"
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "nginx",
+            "namespace": "pro"
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx"
+              }
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "image": "wangweicoding-docker.pkg.coding.net/nginx-ingress-gray/docker/nginx:v11",
+                    "name": "nginx",
+                    "ports": [
+                      {
+                        "containerPort": 80
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "name": "nginx",
+            "namespace": "pro"
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "tcp-80-80",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": 80
+              }
+            ],
+            "selector": {
+              "app": "nginx"
+            },
+            "sessionAffinity": "None",
+            "type": "NodePort"
+          }
+        },
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx"
+            },
+            "name": "my-ingress",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.production",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "全量发布",
+      "refId": "10",
+      "requisiteStageRefIds": [
+        "9"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "v1",
+          "kind": "Namespace",
+          "metadata": {
+            "name": "pro"
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "name": "nginx-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "replicas": 1,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx-canary"
+              }
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx-canary"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "image": "wangweicoding-docker.pkg.coding.net/nginx-ingress-gray/docker/nginx:v11",
+                    "name": "nginx",
+                    "ports": [
+                      {
+                        "containerPort": 80
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "name": "nginx-canary",
+            "namespace": "pro"
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "tcp-80-80",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": 80
+              }
+            ],
+            "selector": {
+              "app": "nginx-canary"
+            },
+            "sessionAffinity": "None",
+            "type": "NodePort"
+          }
+        },
+        {
+          "apiVersion": "extensions/v1beta1",
+          "kind": "Ingress",
+          "metadata": {
+            "annotations": {
+              "kubernetes.io/ingress.class": "nginx",
+              "nginx.ingress.kubernetes.io/canary": "true",
+              "nginx.ingress.kubernetes.io/canary-by-header": "location",
+              "nginx.ingress.kubernetes.io/canary-by-header-value": "shenzhen"
+            },
+            "name": "my-ingress",
+            "namespace": "pro"
+          },
+          "spec": {
+            "rules": [
+              {
+                "host": "nginx-ingress.coding.production",
+                "http": {
+                  "paths": [
+                    {
+                      "backend": {
+                        "serviceName": "nginx-canary",
+                        "servicePort": 80
+                      },
+                      "path": "/"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "A/B 测试",
+      "refId": "11",
+      "requisiteStageRefIds": [
+        "2"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "stageEnabled": {
+        "expression": "${ #judgment(\"是否进行 A/B 测试\").equals(\"是\")}",
+        "type": "expression"
+      },
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    }
+  ],
+  "triggers": [],
+  "updateTs": "1613880705632"
+}

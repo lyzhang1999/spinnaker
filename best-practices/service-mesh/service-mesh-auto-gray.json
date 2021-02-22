@@ -1,0 +1,280 @@
+{
+  "keepWaitingPipelines": false,
+  "lastModifiedBy": "anonymous",
+  "limitConcurrent": true,
+  "spelEvaluator": "v4",
+  "stages": [
+    {
+      "failPipeline": true,
+      "instructions": "设置 V2 灰度比例",
+      "judgmentInputs": [
+        {
+          "value": "50"
+        },
+        {
+          "value": "80"
+        }
+      ],
+      "name": "设置 V2 灰度比例",
+      "notifications": [],
+      "refId": "1",
+      "requisiteStageRefIds": [],
+      "type": "manualJudgment"
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "networking.istio.io/v1alpha3",
+          "kind": "VirtualService",
+          "metadata": {
+            "name": "reviews"
+          },
+          "spec": {
+            "hosts": [
+              "reviews"
+            ],
+            "http": [
+              {
+                "route": [
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v1"
+                    },
+                    "weight": "${100 - #toInt(#judgment(\"设置 V2 灰度比例\"))}"
+                  },
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v2"
+                    },
+                    "weight": "${#toInt(#judgment(\"设置 V2 灰度比例\"))}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "servicemesh"
+      },
+      "name": "设置 VirtualService 灰度",
+      "namespaceOverride": "default",
+      "refId": "2",
+      "requisiteStageRefIds": [
+        "1"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "name": "等待 60S",
+      "refId": "3",
+      "requisiteStageRefIds": [
+        "2"
+      ],
+      "type": "wait",
+      "waitTime": 60
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "networking.istio.io/v1alpha3",
+          "kind": "VirtualService",
+          "metadata": {
+            "name": "reviews"
+          },
+          "spec": {
+            "hosts": [
+              "reviews"
+            ],
+            "http": [
+              {
+                "route": [
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v2"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "servicemesh"
+      },
+      "name": "全量发布 V2",
+      "namespaceOverride": "default",
+      "refId": "4",
+      "requisiteStageRefIds": [
+        "3"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "failPipeline": true,
+      "instructions": "是否自动化灰度V3？",
+      "judgmentInputs": [
+        {
+          "value": "是"
+        },
+        {
+          "value": "否"
+        }
+      ],
+      "name": "是否自动化灰度V3",
+      "notifications": [],
+      "refId": "5",
+      "requisiteStageRefIds": [
+        "4"
+      ],
+      "type": "manualJudgment"
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "networking.istio.io/v1alpha3",
+          "kind": "VirtualService",
+          "metadata": {
+            "name": "reviews"
+          },
+          "spec": {
+            "hosts": [
+              "reviews"
+            ],
+            "http": [
+              {
+                "route": [
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v2"
+                    },
+                    "weight": 50
+                  },
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v3"
+                    },
+                    "weight": 50
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "servicemesh"
+      },
+      "name": "灰度 50 %",
+      "namespaceOverride": "default",
+      "refId": "6",
+      "requisiteStageRefIds": [
+        "5"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "stageEnabled": {
+        "expression": "${ #judgment(\"是否自动化灰度V3\").equals(\"是\")}",
+        "type": "expression"
+      },
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "name": "等待 60S",
+      "refId": "7",
+      "requisiteStageRefIds": [
+        "6"
+      ],
+      "type": "wait",
+      "waitTime": 60
+    },
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "networking.istio.io/v1alpha3",
+          "kind": "VirtualService",
+          "metadata": {
+            "name": "reviews"
+          },
+          "spec": {
+            "hosts": [
+              "reviews"
+            ],
+            "http": [
+              {
+                "route": [
+                  {
+                    "destination": {
+                      "host": "reviews",
+                      "subset": "v3"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "moniker": {
+        "app": "servicemesh"
+      },
+      "name": "全量发布 V3",
+      "namespaceOverride": "default",
+      "refId": "8",
+      "requisiteStageRefIds": [
+        "7"
+      ],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    }
+  ],
+  "triggers": [],
+  "updateTs": "1613953180096"
+}

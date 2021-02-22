@@ -1,0 +1,605 @@
+{
+  "keepWaitingPipelines": false,
+  "lastModifiedBy": "anonymous",
+  "limitConcurrent": true,
+  "spelEvaluator": "v4",
+  "stages": [
+    {
+      "account": "tke-account",
+      "cloudProvider": "kubernetes",
+      "manifests": [
+        {
+          "apiVersion": "rbac.authorization.k8s.io/v1",
+          "kind": "ClusterRoleBinding",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress"
+          },
+          "roleRef": {
+            "apiGroup": "rbac.authorization.k8s.io",
+            "kind": "ClusterRole",
+            "name": "nginx-ingress"
+          },
+          "subjects": [
+            {
+              "kind": "ServiceAccount",
+              "name": "nginx-ingress",
+              "namespace": "default"
+            }
+          ]
+        },
+        {
+          "apiVersion": "rbac.authorization.k8s.io/v1",
+          "kind": "RoleBinding",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress"
+          },
+          "roleRef": {
+            "apiGroup": "rbac.authorization.k8s.io",
+            "kind": "Role",
+            "name": "nginx-ingress"
+          },
+          "subjects": [
+            {
+              "kind": "ServiceAccount",
+              "name": "nginx-ingress",
+              "namespace": "default"
+            }
+          ]
+        },
+        {
+          "apiVersion": "rbac.authorization.k8s.io/v1",
+          "kind": "ClusterRole",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress"
+          },
+          "rules": [
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "configmaps",
+                "endpoints",
+                "nodes",
+                "pods",
+                "secrets"
+              ],
+              "verbs": [
+                "list",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "nodes"
+              ],
+              "verbs": [
+                "get"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "services"
+              ],
+              "verbs": [
+                "get",
+                "list",
+                "update",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                "extensions",
+                "networking.k8s.io"
+              ],
+              "resources": [
+                "ingresses"
+              ],
+              "verbs": [
+                "get",
+                "list",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "events"
+              ],
+              "verbs": [
+                "create",
+                "patch"
+              ]
+            },
+            {
+              "apiGroups": [
+                "extensions",
+                "networking.k8s.io"
+              ],
+              "resources": [
+                "ingresses/status"
+              ],
+              "verbs": [
+                "update"
+              ]
+            }
+          ]
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "component": "default-backend",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress-default-backend"
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "http",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": "http"
+              }
+            ],
+            "selector": {
+              "app": "nginx-ingress",
+              "app.kubernetes.io/component": "default-backend",
+              "release": "nginx-ingress"
+            },
+            "type": "ClusterIP"
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "ServiceAccount",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress-backend"
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "annotations": {},
+            "labels": {
+              "app": "nginx-ingress",
+              "app.kubernetes.io/component": "controller",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress-controller"
+          },
+          "spec": {
+            "minReadySeconds": 0,
+            "replicas": 1,
+            "revisionHistoryLimit": 10,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx-ingress",
+                "release": "nginx-ingress"
+              }
+            },
+            "strategy": {},
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx-ingress",
+                  "app.kubernetes.io/component": "controller",
+                  "component": "controller",
+                  "release": "nginx-ingress"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "args": [
+                      "/nginx-ingress-controller",
+                      "--default-backend-service=default/nginx-ingress-default-backend",
+                      "--election-id=ingress-controller-leader",
+                      "--ingress-class=nginx",
+                      "--configmap=default/nginx-ingress-controller"
+                    ],
+                    "env": [
+                      {
+                        "name": "POD_NAME",
+                        "valueFrom": {
+                          "fieldRef": {
+                            "fieldPath": "metadata.name"
+                          }
+                        }
+                      },
+                      {
+                        "name": "POD_NAMESPACE",
+                        "valueFrom": {
+                          "fieldRef": {
+                            "fieldPath": "metadata.namespace"
+                          }
+                        }
+                      }
+                    ],
+                    "image": "ccr.ccs.tencentyun.com/tke-market/nginx-ingress-controller:0.30.0",
+                    "imagePullPolicy": "IfNotPresent",
+                    "livenessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "path": "/healthz",
+                        "port": 10254,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 10,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 1
+                    },
+                    "name": "nginx-ingress-controller",
+                    "ports": [
+                      {
+                        "containerPort": 80,
+                        "name": "http",
+                        "protocol": "TCP"
+                      },
+                      {
+                        "containerPort": 443,
+                        "name": "https",
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "readinessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "path": "/healthz",
+                        "port": 10254,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 10,
+                      "periodSeconds": 10,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 1
+                    },
+                    "resources": {},
+                    "securityContext": {
+                      "allowPrivilegeEscalation": true,
+                      "capabilities": {
+                        "add": [
+                          "NET_BIND_SERVICE"
+                        ],
+                        "drop": [
+                          "ALL"
+                        ]
+                      },
+                      "runAsUser": 101
+                    }
+                  }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "hostNetwork": false,
+                "serviceAccountName": "nginx-ingress",
+                "terminationGracePeriodSeconds": 60
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "app.kubernetes.io/component": "default-backend",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress-default-backend"
+          },
+          "spec": {
+            "replicas": 1,
+            "revisionHistoryLimit": 10,
+            "selector": {
+              "matchLabels": {
+                "app": "nginx-ingress",
+                "release": "nginx-ingress"
+              }
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "nginx-ingress",
+                  "app.kubernetes.io/component": "default-backend",
+                  "release": "nginx-ingress"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "image": "ccr.ccs.tencentyun.com/tke-market/defaultbackend-amd64:1.5",
+                    "imagePullPolicy": "IfNotPresent",
+                    "livenessProbe": {
+                      "failureThreshold": 3,
+                      "httpGet": {
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 30,
+                      "periodSeconds": 10,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 5
+                    },
+                    "name": "nginx-ingress-default-backend",
+                    "ports": [
+                      {
+                        "containerPort": 8080,
+                        "name": "http",
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "readinessProbe": {
+                      "failureThreshold": 6,
+                      "httpGet": {
+                        "path": "/healthz",
+                        "port": 8080,
+                        "scheme": "HTTP"
+                      },
+                      "initialDelaySeconds": 0,
+                      "periodSeconds": 5,
+                      "successThreshold": 1,
+                      "timeoutSeconds": 5
+                    },
+                    "resources": {},
+                    "securityContext": {
+                      "runAsUser": 65534
+                    }
+                  }
+                ],
+                "serviceAccountName": "nginx-ingress-backend",
+                "terminationGracePeriodSeconds": 60
+              }
+            }
+          }
+        },
+        {
+          "apiVersion": "rbac.authorization.k8s.io/v1",
+          "kind": "Role",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress"
+          },
+          "rules": [
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "namespaces"
+              ],
+              "verbs": [
+                "get"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "configmaps",
+                "pods",
+                "secrets",
+                "endpoints"
+              ],
+              "verbs": [
+                "get",
+                "list",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "services"
+              ],
+              "verbs": [
+                "get",
+                "list",
+                "update",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                "extensions",
+                "networking.k8s.io"
+              ],
+              "resources": [
+                "ingresses"
+              ],
+              "verbs": [
+                "get",
+                "list",
+                "watch"
+              ]
+            },
+            {
+              "apiGroups": [
+                "extensions",
+                "networking.k8s.io"
+              ],
+              "resources": [
+                "ingresses/status"
+              ],
+              "verbs": [
+                "update"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resourceNames": [
+                "ingress-controller-leader-nginx"
+              ],
+              "resources": [
+                "configmaps"
+              ],
+              "verbs": [
+                "get",
+                "update"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "configmaps"
+              ],
+              "verbs": [
+                "create"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "endpoints"
+              ],
+              "verbs": [
+                "create",
+                "get",
+                "update"
+              ]
+            },
+            {
+              "apiGroups": [
+                ""
+              ],
+              "resources": [
+                "events"
+              ],
+              "verbs": [
+                "create",
+                "patch"
+              ]
+            }
+          ]
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "Service",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "component": "controller",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress-controller"
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "http",
+                "port": 80,
+                "protocol": "TCP",
+                "targetPort": "http"
+              },
+              {
+                "name": "https",
+                "port": 443,
+                "protocol": "TCP",
+                "targetPort": "https"
+              }
+            ],
+            "selector": {
+              "app": "nginx-ingress",
+              "app.kubernetes.io/component": "controller",
+              "release": "nginx-ingress"
+            },
+            "type": "LoadBalancer"
+          }
+        },
+        {
+          "apiVersion": "v1",
+          "kind": "ServiceAccount",
+          "metadata": {
+            "labels": {
+              "app": "nginx-ingress",
+              "chart": "nginx-ingress-1.36.3",
+              "heritage": "Helm",
+              "release": "nginx-ingress"
+            },
+            "name": "nginx-ingress"
+          }
+        }
+      ],
+      "moniker": {
+        "app": "nginxgray"
+      },
+      "name": "Deploy (Manifest)",
+      "namespaceOverride": "default",
+      "refId": "1",
+      "requisiteStageRefIds": [],
+      "skipExpressionEvaluation": false,
+      "source": "text",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    }
+  ],
+  "triggers": [],
+  "updateTs": "1613832817419"
+}
